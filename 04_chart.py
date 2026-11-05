@@ -81,16 +81,16 @@ ax.set_xticks(x)
 ax.set_xticklabels(labels, fontsize=11)
 
 ax.set_ylim(0, top * 1.45)
-ax.set_ylabel("New product listings", fontsize=11)
-ax.set_title("New oral phenylephrine cold medicines listed with the FDA each year",
+ax.set_ylabel("Listings", fontsize=11)
+ax.set_title("Oral phenylephrine listings by marketing start year",
              fontsize=13, pad=12)
 
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 fig.text(0.01, 0.01,
-         "Source: openFDA NDC Directory, pulled Nov 5, 2026. OTC monograph products taken by mouth. "
-         "Only currently listed products are included.",
+         "Source: openFDA NDC Directory, pulled Nov 5, 2026. OTC monograph products taken by mouth, "
+         "currently listed only. Start dates are not necessarily first launch dates.",
          fontsize=7.5, color="gray")
 
 plt.tight_layout(rect=(0, 0.03, 1, 1))

@@ -1,6 +1,6 @@
 # phenylephrine-analysis
 
-How many new phenylephrine cold medicines have been listed with the FDA since the FDA proposed getting rid of it?
+How many oral phenylephrine cold medicine listings in the FDA's drug directory have marketing start dates after the FDA proposed getting rid of it?
 
 I did this for a piece on my Substack, [Supply & State](https://sav1440604.substack.com). It's also me practicing pulling data from an API and cleaning it in Python.
 
@@ -21,7 +21,7 @@ Phenylephrine is the decongestant in most cold medicine sold on the open shelf (
 | Listed after the Sept 12, 2023 vote | 297 |
 | Listed after the Nov 8, 2024 proposal | 175 |
 
-| Year | New listings |
+| Marketing start year | Listings |
 |---|---|
 | 2021 | 108 |
 | 2022 | 94 |
