@@ -1,5 +1,5 @@
 # chart.py
-# bar chart of new oral otc phenylephrine listings per quarter, 2021 to now
+# bar chart of new oral otc phenylephrine listings per year, 2021 to now
 # with the fda vote and the proposed order marked
 #
 # only going back to 2021 on purpose. the ndc directory only has products
@@ -11,6 +11,12 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+# use arial (falls back to helvetica if arial isnt there)
+plt.rcParams["font.family"] = ["Arial", "Helvetica", "sans-serif"]
+
+RED = "#cc0000"
+LIGHT_RED = "#f0a0a0"  # for 2026 since the year isnt over
+
 # read the filtered csv from clean.py
 rows = []
 with open("data/oral_otc_phenylephrine.csv") as f:
@@ -18,64 +24,78 @@ with open("data/oral_otc_phenylephrine.csv") as f:
     for row in reader:
         rows.append(row)
 
-# make a list of every quarter from 2021 q1 to 2026 q4
-quarters = []
-for year in range(2021, 2027):
-    for q in range(1, 5):
-        quarters.append(str(year) + " Q" + str(q))
+years = [2021, 2022, 2023, 2024, 2025, 2026]
 
-# count listings per quarter
+# count listings per year
 counts = {}
-for label in quarters:
-    counts[label] = 0
+for y in years:
+    counts[y] = 0
 
 for row in rows:
-    date = row["marketing_start_date"]  # like 20240115
-    year = int(date[0:4])
-    month = int(date[4:6])
-    q = (month - 1) // 3 + 1  # jan-mar = 1, apr-jun = 2, etc
-    label = str(year) + " Q" + str(q)
-    if label in counts:
-        counts[label] = counts[label] + 1
+    year = int(row["marketing_start_date"][0:4])
+    if year in counts:
+        counts[year] = counts[year] + 1
+
+# print the numbers so i can double check
+for y in years:
+    print(y, counts[y])
 
 values = []
-for label in quarters:
-    values.append(counts[label])
+colors = []
+for y in years:
+    values.append(counts[y])
+    if y == 2026:
+        colors.append(LIGHT_RED)
+    else:
+        colors.append(RED)
 
-# print the numbers too so i can double check the chart
-for label in quarters:
-    print(label, counts[label])
+fig, ax = plt.subplots(figsize=(9, 5))
+x = list(range(len(years)))
+bars = ax.bar(x, values, color=colors, width=0.65)
 
-# draw it
-fig, ax = plt.subplots(figsize=(11, 5))
-x = list(range(len(quarters)))
-ax.bar(x, values, color="#4a6fa5")
+# put the number on top of each bar
+for i in range(len(values)):
+    ax.text(x[i], values[i] + 2, str(values[i]), ha="center", fontsize=11)
 
-# mark the vote (sept 2023 = 2023 q3) and proposal (nov 2024 = 2024 q4)
-vote_i = quarters.index("2023 Q3")
-prop_i = quarters.index("2024 Q4")
-ax.axvline(vote_i, color="gray", linestyle="--")
-ax.axvline(prop_i, color="black", linestyle="--")
+# dashed lines roughly where in the year each event happened
+# each bar spans index - 0.5 to index + 0.5, so sept 12 is about 70% through 2023
+# and nov 8 is about 85% through 2024
+vote_x = years.index(2023) - 0.5 + 0.70
+prop_x = years.index(2024) - 0.5 + 0.85
 top = max(values)
-ax.text(vote_i + 0.15, top, "FDA advisers vote\n16-0 it doesn't work", fontsize=9, va="top")
-ax.text(prop_i + 0.15, top * 0.75, "FDA proposes\nremoving it", fontsize=9, va="top")
 
+ax.axvline(vote_x, color="gray", linestyle="--", linewidth=1)
+ax.axvline(prop_x, color="black", linestyle="--", linewidth=1)
+ax.text(vote_x - 0.05, top * 1.42, "Sept 2023:\nFDA advisers vote\n16-0 it doesn't work",
+        fontsize=9, ha="right", va="top")
+ax.text(prop_x + 0.05, top * 1.42, "Nov 2024:\nFDA proposes\nremoving it",
+        fontsize=9, ha="left", va="top")
+
+labels = []
+for y in years:
+    if y == 2026:
+        labels.append("2026\n(through Nov 5)")
+    else:
+        labels.append(str(y))
 ax.set_xticks(x)
-ax.set_xticklabels(quarters, rotation=60, ha="right", fontsize=8)
-ax.set_ylabel("New product listings")
-ax.set_title("New oral OTC phenylephrine product listings by quarter, 2021-2026")
+ax.set_xticklabels(labels, fontsize=11)
+
+ax.set_ylim(0, top * 1.45)
+ax.set_ylabel("New product listings", fontsize=11)
+ax.set_title("New oral phenylephrine cold medicines listed with the FDA each year",
+             fontsize=13, pad=12)
 
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 fig.text(0.01, 0.01,
-         "Source: openFDA NDC Directory, pulled Nov 5, 2026. 2026 Q4 is partial. "
-         "Only products currently listed are included.",
-         fontsize=7, color="gray")
+         "Source: openFDA NDC Directory, pulled Nov 5, 2026. OTC monograph products taken by mouth. "
+         "Only currently listed products are included.",
+         fontsize=7.5, color="gray")
 
 plt.tight_layout(rect=(0, 0.03, 1, 1))
 
 Path("charts").mkdir(exist_ok=True)
-plt.savefig("charts/listings_by_quarter.png", dpi=200)
+plt.savefig("charts/listings_by_year.png", dpi=200)
 print()
-print("saved charts/listings_by_quarter.png")
+print("saved charts/listings_by_year.png")
