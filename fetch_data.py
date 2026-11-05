@@ -1,17 +1,6 @@
-"""
-fetch_data.py
-
-Step 1 of the phenylephrine analysis: download raw records from the
-openFDA NDC Directory and save them to disk, untouched.
-
-Rule we follow: this script only DOWNLOADS. It never filters, cleans,
-or changes anything. Every later script reads from the raw file this
-one saves. That way, if you make a mistake later, you never have to
-re-download, and anyone can check your work from the same starting point.
-
-Run it from your project folder with your venv active:
-    python fetch_data.py
-"""
+# fetch_data.py
+# downloads phenylephrine + pseudoephedrine records from the openfda ndc directory
+# just saves the raw data, no filtering here (do that in clean.py)
 
 import json
 import time
@@ -20,27 +9,19 @@ from pathlib import Path
 import requests
 
 BASE_URL = "https://api.fda.gov/drug/ndc.json"
+PAGE_SIZE = 1000  # api max per request
 
-# openFDA returns at most 1,000 records per request. To get more, you
-# ask for the next "page" using `skip`. This is called pagination.
-PAGE_SIZE = 1000
-
-# The two ingredients we're comparing. We search broadly here on purpose
-# (any product listing that ingredient, any route). Narrowing to oral OTC
-# products happens later in clean.py, where you can see and explain
-# every filter. Searching broadly first also lets you look at what you're
-# throwing away, which is part of checking your work.
-INGREDIENTS = {
+# search broad for now, narrow down to oral otc later
+searches = {
     "phenylephrine": 'active_ingredients.name:"PHENYLEPHRINE"',
     "pseudoephedrine": 'active_ingredients.name:"PSEUDOEPHEDRINE"',
 }
 
-RAW_DIR = Path("data/raw")
-RAW_DIR.mkdir(parents=True, exist_ok=True)
+raw_dir = Path("data/raw")
+raw_dir.mkdir(parents=True, exist_ok=True)
 
 
-def fetch_all(search: str) -> list[dict]:
-    """Page through every result for one search and return them as a list."""
+def fetch_all(search):
     results = []
     skip = 0
 
@@ -48,41 +29,35 @@ def fetch_all(search: str) -> list[dict]:
         params = {"search": search, "limit": PAGE_SIZE, "skip": skip}
         response = requests.get(BASE_URL, params=params, timeout=60)
 
-        # openFDA returns a 404 when you've paged past the last result.
-        # That's how we know we're done.
+        # 404 means no more results
         if response.status_code == 404:
             break
         response.raise_for_status()
 
-        payload = response.json()
-        batch = payload["results"]
-        results.extend(batch)
+        data = response.json()
+        results = results + data["results"]
 
-        total = payload["meta"]["results"]["total"]
-        print(f"  got {len(results)} of {total}")
+        total = data["meta"]["results"]["total"]
+        print("got", len(results), "of", total)
 
-        skip += PAGE_SIZE
+        skip = skip + PAGE_SIZE
         if skip >= total:
             break
 
-        # Be polite to a free public API. Without an API key you're
-        # limited to a few requests per minute and 1,000 per day.
-        time.sleep(1)
+        time.sleep(1)  # dont hit the rate limit
 
     return results
 
 
-if __name__ == "__main__":
-    for name, search in INGREDIENTS.items():
-        print(f"Fetching {name}...")
-        records = fetch_all(search)
+for name in searches:
+    print("fetching", name)
+    records = fetch_all(searches[name])
 
-        out_path = RAW_DIR / f"{name}_ndc_raw.json"
-        with open(out_path, "w") as f:
-            json.dump(records, f, indent=2)
+    out_path = raw_dir / (name + "_ndc_raw.json")
+    with open(out_path, "w") as f:
+        json.dump(records, f, indent=2)
 
-        print(f"Saved {len(records)} records to {out_path}\n")
+    print("saved", len(records), "records to", out_path)
 
-    # Write down WHEN you pulled the data. The NDC Directory changes
-    # constantly, so your README needs to say which day's version you used.
-    (RAW_DIR / "pulled_on.txt").write_text(time.strftime("%Y-%m-%d"))
+# save the date i pulled it since the directory changes
+(raw_dir / "pulled_on.txt").write_text(time.strftime("%Y-%m-%d"))
